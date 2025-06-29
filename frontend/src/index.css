@@ -488,6 +488,10 @@ input[type="radio"], input[type="checkbox"] {
     flex: 1;
     margin-bottom: 0;
   }
+
+  .form-date-group {
+    padding-top: var(--space-lg);
+  }
   
   .form-actions {
     flex-direction: row;

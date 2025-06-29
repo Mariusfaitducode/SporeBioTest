@@ -1,16 +1,24 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-    deleteBioSample,
-    fetchBioSample,
+  deleteBioSample,
+  fetchBioSample,
 } from '../api/biosample';
 import {
-    createComment,
-    deleteComment,
-    fetchCommentsByBioSample
+  createComment,
+  deleteComment,
+  fetchCommentsByBioSample
 } from '../api/comment';
 import type { BioSample } from '../types/biosample';
 import type { Comment, CommentCreate } from '../types/comment';
+import {
+  confirmDeleteComment,
+  confirmDeleteSample,
+  getErrorMessage
+} from '../utils';
+import AddComment from './AddComment';
+import CommentCard from './CommentCard';
+import SampleInformation from './SampleInformation';
 
 export default function BioSampleDetail() {
   const { id } = useParams<{ id: string }>();
@@ -19,9 +27,6 @@ export default function BioSampleDetail() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [newComment, setNewComment] = useState('');
-  const [commentDate, setCommentDate] = useState('');
-  const [useTodayForComment, setUseTodayForComment] = useState(true);
   const [submittingComment, setSubmittingComment] = useState(false);
 
   useEffect(() => {
@@ -41,7 +46,7 @@ export default function BioSampleDetail() {
       setSample(sampleData);
       setComments(commentsData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -50,9 +55,7 @@ export default function BioSampleDetail() {
   const handleDelete = async () => {
     if (!sample) return;
     
-    const confirmMessage = `Are you sure you want to delete the sample from "${sample.sampling_location}"? This action cannot be undone and will also delete all associated comments.`;
-    
-    if (!window.confirm(confirmMessage)) {
+    if (!confirmDeleteSample(sample.sampling_location, true)) {
       return;
     }
 
@@ -60,40 +63,25 @@ export default function BioSampleDetail() {
       await deleteBioSample(sample.id);
       navigate('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete sample');
+      setError(getErrorMessage(err));
     }
   };
 
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!sample || !newComment.trim()) return;
-
+  const handleAddComment = async (commentData: CommentCreate) => {
     try {
       setSubmittingComment(true);
-      const commentData: CommentCreate = {
-        biosample_id: sample.id,
-        content: newComment.trim()
-      };
-      
-      // Add date only if not using today's date
-      if (!useTodayForComment && commentDate) {
-        commentData.created_at = commentDate;
-      }
-      
       const createdComment = await createComment(commentData);
       setComments([...comments, createdComment]);
-      setNewComment('');
-      setCommentDate('');
-      setUseTodayForComment(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add comment');
+      setError(getErrorMessage(err));
+      throw err; // Re-throw to let AddComment handle the error state
     } finally {
       setSubmittingComment(false);
     }
   };
 
   const handleDeleteComment = async (commentId: number) => {
-    if (!window.confirm('Are you sure you want to delete this comment?')) {
+    if (!confirmDeleteComment()) {
       return;
     }
 
@@ -101,19 +89,9 @@ export default function BioSampleDetail() {
       await deleteComment(commentId);
       setComments(comments.filter(comment => comment.id !== commentId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete comment');
+      setError(getErrorMessage(err));
     }
   };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const today = new Date().toISOString().split('T')[0];
 
   if (loading) {
     return (
@@ -166,141 +144,28 @@ export default function BioSampleDetail() {
         </div>
       )}
 
-      <div className="card">
-        <h2>Sample Information</h2>
-        
-        <div className="sample-info">
-          <div className="sample-info-item">
-            <span className="sample-info-label">Sample ID</span>
-            <span className="sample-info-value">#{sample.id}</span>
-          </div>
-          <div className="sample-info-item">
-            <span className="sample-info-label">Location</span>
-            <span className="sample-info-value">{sample.sampling_location}</span>
-          </div>
-          <div className="sample-info-item">
-            <span className="sample-info-label">Type</span>
-            <span className="sample-info-value">{sample.type}</span>
-          </div>
-          <div className="sample-info-item">
-            <span className="sample-info-label">Sampling Date</span>
-            <time className="sample-info-value" dateTime={sample.sampling_date}>
-              {formatDate(sample.sampling_date)}
-            </time>
-          </div>
-          <div className="sample-info-item">
-            <span className="sample-info-label">Operator</span>
-            <span className="sample-info-value">{sample.sampling_operator}</span>
-          </div>
-        </div>
-      </div>
+      <SampleInformation sample={sample} />
 
       <section className="comments-section" aria-labelledby="comments-heading">
         <h2 id="comments-heading">Comments ({comments.length})</h2>
         
-        {comments.length === 0 ? (
-          <p className="empty-state">
-            No comments yet. Add the first comment below.
-          </p>
-        ) : (
-          <div className="comments-list">
+        {comments.length > 0 && (
+          <div className="comments-list" role="list">
             {comments.map((comment) => (
-              <article key={comment.id} className="comment">
-                <header className="comment-header">
-                  <time className="comment-date" dateTime={comment.created_at}>
-                    {formatDate(comment.created_at)}
-                  </time>
-                  <button 
-                    className="danger small" 
-                    onClick={() => handleDeleteComment(comment.id)}
-                    aria-label="Delete this comment"
-                  >
-                    Delete
-                  </button>
-                </header>
-                <p className="comment-content">{comment.content}</p>
-              </article>
+              <CommentCard 
+                key={comment.id}
+                comment={comment}
+                onDelete={handleDeleteComment}
+              />
             ))}
           </div>
         )}
 
-        <form onSubmit={handleAddComment} className="comment-form">
-          <h3>Add Comment</h3>
-          
-          <div className="form-group">
-            <label htmlFor="comment" className="required">Comment</label>
-            <textarea
-              id="comment"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Enter your comment..."
-              rows={4}
-              required
-              aria-describedby="comment-help"
-            />
-            <small id="comment-help">Describe observations, findings, or notes about this sample.</small>
-          </div>
-
-          <div className="form-group">
-              <legend>Comment Date</legend>
-              
-              <div className="date-group" role="radiogroup" aria-labelledby="date-options">
-                <div className="radio-option">
-                  <input
-                    type="radio"
-                    id="today"
-                    name="commentDateOption"
-                    checked={useTodayForComment}
-                    onChange={() => setUseTodayForComment(true)}
-                  />
-                  <label htmlFor="today">
-                    Use today's date ({today})
-                  </label>
-                </div>
-                
-                <div className="radio-option">
-                  <input
-                    type="radio"
-                    id="custom-date"
-                    name="commentDateOption"
-                    checked={!useTodayForComment}
-                    onChange={() => setUseTodayForComment(false)}
-                  />
-                  <label htmlFor="custom-date">
-                    Specify a date
-                  </label>
-                </div>
-                {!useTodayForComment && (
-                <div >
-                  <input
-                    type="date"
-                    id="commentDate"
-                    value={commentDate}
-                    onChange={(e) => setCommentDate(e.target.value)}
-                    required={!useTodayForComment}
-                  />
-                </div>
-              )}
-              </div>
-
-              
-          </div>
-
-          <div className="form-actions">
-            <button 
-              type="submit" 
-              disabled={submittingComment || !newComment.trim()}
-              aria-describedby={submittingComment ? "submitting-status" : undefined}
-            >
-              {submittingComment ? 'Adding Comment...' : 'Add Comment'}
-            </button>
-            {submittingComment && (
-              <span id="submitting-status" aria-live="polite">
-                Please wait...
-              </span>
-            )}
-          </div>
-        </form>
+        <AddComment 
+          biosampleId={sample.id}
+          onAddComment={handleAddComment}
+          isSubmitting={submittingComment}
+        />
       </section>
     </div>
   );

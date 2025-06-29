@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { createBioSample, fetchBioSample, updateBioSample } from '../api/biosample';
 import type { BioSampleCreate } from '../types/biosample';
+import { getErrorMessage, getTodayDateString } from '../utils';
 
 export default function BioSampleForm() {
   const { id } = useParams<{ id: string }>();
@@ -33,12 +34,12 @@ export default function BioSampleForm() {
       setFormData({
         sampling_location: sample.sampling_location,
         type: sample.type,
-        sampling_date: sample.sampling_date.split('T')[0],
+        sampling_date: sample.sampling_date.split('T')[0]!,
         sampling_operator: sample.sampling_operator
       });
       setUseTodayDate(false); // In edit mode, use existing date
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load sample');
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -74,7 +75,7 @@ export default function BioSampleForm() {
         setTimeout(() => navigate(`/biosample/${newSample.id}`), 1500);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save sample');
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -107,7 +108,7 @@ export default function BioSampleForm() {
     'other'
   ];
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayDateString();
 
   return (
     <div className="container">
@@ -238,36 +239,24 @@ export default function BioSampleForm() {
               name="sampling_operator"
               value={formData.sampling_operator}
               onChange={handleChange}
-              placeholder="e.g., John Doe, Lab Technician"
+              placeholder="e.g., Dr. Smith, Lab Tech 01"
               required
               aria-describedby="operator-help"
             />
             <small id="operator-help">
-              Name of the person who collected the sample
+              Name or ID of the person who collected the sample
             </small>
           </div>
 
           <div className="form-actions">
-            <button 
-              type="submit" 
-              disabled={loading}
-              aria-describedby={loading ? "loading-status" : undefined}
-            >
-              {loading 
-                ? (isEdit ? 'Updating...' : 'Creating...') 
-                : (isEdit ? 'Update Sample' : 'Create Sample')
-              }
+            <button type="submit" disabled={loading}>
+              {loading ? (isEdit ? 'Updating...' : 'Creating...') : (isEdit ? 'Update Sample' : 'Create Sample')}
             </button>
             <Link to={isEdit ? `/biosample/${id}` : '/'}>
               <button type="button" className="secondary">
                 Cancel
               </button>
             </Link>
-            {loading && (
-              <span id="loading-status" aria-live="polite">
-                Please wait...
-              </span>
-            )}
           </div>
         </form>
       </div>
