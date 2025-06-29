@@ -15,8 +15,10 @@ export default function BioSampleForm() {
     sampling_date: '',
     sampling_operator: ''
   });
-  
+
+  const [originalData, setOriginalData] = useState<BioSampleCreate | null>(null);
   const [useTodayDate, setUseTodayDate] = useState(true);
+  const [originalUseTodayDate, setOriginalUseTodayDate] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -31,13 +33,17 @@ export default function BioSampleForm() {
     try {
       setLoading(true);
       const sample = await fetchBioSample(sampleId);
-      setFormData({
+      const loadedData = {
         sampling_location: sample.sampling_location,
         type: sample.type,
         sampling_date: sample.sampling_date.split('T')[0]!,
         sampling_operator: sample.sampling_operator
-      });
+      };
+      
+      setFormData(loadedData);
+      setOriginalData(loadedData);
       setUseTodayDate(false); // In edit mode, use existing date
+      setOriginalUseTodayDate(false);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -45,8 +51,75 @@ export default function BioSampleForm() {
     }
   };
 
+  // Validation: check if all required fields are filled
+  const isFormValid = () => {
+    return (
+      formData.sampling_location.trim() !== '' &&
+      formData.type !== '' &&
+      formData.sampling_operator.trim() !== ''
+    );
+  };
+
+  // Check if data has changed for update
+  const hasDataChanged = () => {
+    if (!isEdit || !originalData) return true;
+    
+    const currentDataToSend: BioSampleCreate = {
+      sampling_location: formData.sampling_location,
+      type: formData.type,
+      sampling_operator: formData.sampling_operator
+    };
+
+    const originalDataToSend: BioSampleCreate = {
+      sampling_location: originalData.sampling_location,
+      type: originalData.type,
+      sampling_operator: originalData.sampling_operator
+    };
+
+    // Add date only if not using today's date
+    if (!useTodayDate && formData.sampling_date) {
+      currentDataToSend.sampling_date = formData.sampling_date;
+    }
+    if (!originalUseTodayDate && originalData.sampling_date) {
+      originalDataToSend.sampling_date = originalData.sampling_date;
+    }
+
+    // Compare all fields including the date option
+    return (
+      JSON.stringify(currentDataToSend) !== JSON.stringify(originalDataToSend) ||
+      useTodayDate !== originalUseTodayDate
+    );
+  };
+
+  const canSubmit = () => {
+    if (!isFormValid()) return false;
+    if (isEdit && !hasDataChanged()) return false;
+    return true;
+  };
+
+  const getSubmitButtonText = () => {
+    if (loading) {
+      return isEdit ? 'Updating...' : 'Creating...';
+    }
+    
+    if (!isFormValid()) {
+      return 'Fill all required fields';
+    }
+    
+    if (isEdit && !hasDataChanged()) {
+      return 'No changes to save';
+    }
+    
+    return isEdit ? 'Update Sample' : 'Create Sample';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!canSubmit()) {
+      return;
+    }
+
     setError(null);
     setSuccess(null);
 
@@ -249,8 +322,12 @@ export default function BioSampleForm() {
           </div>
 
           <div className="form-actions">
-            <button type="submit" disabled={loading}>
-              {loading ? (isEdit ? 'Updating...' : 'Creating...') : (isEdit ? 'Update Sample' : 'Create Sample')}
+            <button 
+              type="submit" 
+              disabled={!canSubmit() || loading}
+              className={!canSubmit() ? 'disabled' : ''}
+            >
+              {getSubmitButtonText()}
             </button>
             <Link to={isEdit ? `/biosample/${id}` : '/'}>
               <button type="button" className="secondary">
