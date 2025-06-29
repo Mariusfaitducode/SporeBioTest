@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlmodel import Session, select, func
 from models.biosample import BioSample
 from schemas.biosample import BioSampleCreate
 from db.database import get_session
@@ -20,9 +20,34 @@ def create_biosample(biosample: BioSampleCreate, session: Session = Depends(get_
     session.refresh(db_biosample)
     return db_biosample
 
-@router.get("/", response_model=List[BioSample])
-def get_biosamples(session: Session = Depends(get_session)):
-    return session.exec(select(BioSample)).all()
+@router.get("/", response_model=dict)
+def get_biosamples(
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(10, ge=1, le=100, description="Page size"),
+    session: Session = Depends(get_session)
+):
+    # Calculate offset
+    offset = (page - 1) * size
+    
+    # Get total count
+    total_count = session.exec(select(func.count(BioSample.id))).one()
+    
+    # Get paginated results
+    statement = select(BioSample).offset(offset).limit(size)
+    biosamples = session.exec(statement).all()
+    
+    # Calculate pagination metadata
+    total_pages = (total_count + size - 1) // size
+    
+    return {
+        "items": biosamples,
+        "page": page,
+        "size": size,
+        "total": total_count,
+        "total_pages": total_pages,
+        "has_next": page < total_pages,
+        "has_prev": page > 1
+    }
 
 @router.get("/{biosample_id}", response_model=BioSample)
 def get_biosample(biosample_id: int, session: Session = Depends(get_session)):

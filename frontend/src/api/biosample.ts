@@ -1,11 +1,11 @@
-import type { BioSample, BioSampleCreate } from "../types/biosample";
+import type { BioSample, BioSampleCreate, PaginatedBioSamples } from "../types/biosample";
 import type { Comment, CommentCreate } from "../types/comment";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // BioSample API functions
-export async function fetchBioSamples(): Promise<BioSample[]> {
-  const res = await fetch(`${BASE_URL}/biosamples/`);
+export async function fetchBioSamples(page: number = 1, size: number = 10): Promise<PaginatedBioSamples> {
+  const res = await fetch(`${BASE_URL}/biosamples/?page=${page}&size=${size}`);
   if (!res.ok) throw new Error("Failed to fetch biosamples");
   return res.json();
 }
