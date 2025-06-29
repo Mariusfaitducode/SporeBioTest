@@ -4,11 +4,16 @@ from models.comment import Comment
 from schemas.comment import CommentCreate
 from db.database import get_session
 from typing import List
+from datetime import date
 
 router = APIRouter()
 
 @router.post("/", response_model=Comment)
 def create_comment(comment: CommentCreate, session: Session = Depends(get_session)):
+    
+    if comment.created_at is None:
+        comment.created_at = date.today()
+    
     db_comment = Comment(**comment.model_dump())
     session.add(db_comment)
     session.commit()

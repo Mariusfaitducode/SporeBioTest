@@ -1,0 +1,3 @@
+-- SQLite
+DROP TABLE IF EXISTS biosample;
+DROP TABLE IF EXISTS comment;

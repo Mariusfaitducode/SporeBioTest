@@ -4,11 +4,16 @@ from models.biosample import BioSample
 from schemas.biosample import BioSampleCreate
 from db.database import get_session
 from typing import List
+from datetime import date
 
 router = APIRouter()
 
 @router.post("/", response_model=BioSample)
 def create_biosample(biosample: BioSampleCreate, session: Session = Depends(get_session)):
+    
+    if biosample.sampling_date is None:
+        biosample.sampling_date = date.today()
+    
     db_biosample = BioSample(**biosample.model_dump()) 
     session.add(db_biosample)
     session.commit()
@@ -28,10 +33,17 @@ def update_biosample(biosample_id: int, biosample: BioSampleCreate, session: Ses
     db_biosample = session.get(BioSample, biosample_id)
     if not db_biosample:
         raise HTTPException(status_code=404, detail="BioSample not found")
+    
+    if biosample.sampling_date is None:
+        biosample.sampling_date = db_biosample.sampling_date
+    
     db_biosample.sampling_location = biosample.sampling_location
     db_biosample.type = biosample.type
     db_biosample.sampling_date = biosample.sampling_date
     db_biosample.sampling_operator = biosample.sampling_operator
+    session.commit()
+    session.refresh(db_biosample)
+    return db_biosample
 
 @router.delete("/{biosample_id}", response_model=BioSample)
 def delete_biosample(biosample_id: int, session: Session = Depends(get_session)):
