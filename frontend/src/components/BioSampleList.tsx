@@ -10,6 +10,7 @@ export default function BioSampleList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pageCache, setPageCache] = useState<Map<number, PaginatedBioSamples>>(new Map());
   const pageSize = 10;
 
   useEffect(() => {
@@ -17,11 +18,21 @@ export default function BioSampleList() {
   }, [currentPage]);
 
   const loadSamples = async () => {
+    // Check if page is already cached
+    if (pageCache.has(currentPage)) {
+      setPaginatedData(pageCache.get(currentPage)!);
+      setError(null);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
       const data = await fetchBioSamples(currentPage, pageSize);
       setPaginatedData(data);
+      
+      // Cache the loaded page
+      setPageCache(prev => new Map(prev).set(currentPage, data));
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -36,7 +47,8 @@ export default function BioSampleList() {
 
     try {
       await deleteBioSample(id);
-      // Reload current page after deletion
+      // Clear cache and reload current page after deletion
+      setPageCache(new Map());
       await loadSamples();
     } catch (err) {
       setError(getErrorMessage(err));
@@ -55,7 +67,7 @@ export default function BioSampleList() {
     }
   };
 
-  if (loading) {
+  if (loading && !pageCache.has(currentPage)) {
     return (
       <div className="container">
         <div className="loading" role="status" aria-label="Loading samples">
@@ -89,6 +101,7 @@ export default function BioSampleList() {
           <p>
             Showing {samples.length} of {paginatedData.total} samples 
             (Page {paginatedData.page} of {paginatedData.total_pages})
+            {pageCache.size > 1 && <span> • {pageCache.size} pages cached</span>}
           </p>
         </div>
       )}

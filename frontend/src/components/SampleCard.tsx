@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { BioSample } from '../types/biosample';
 import { formatDate } from '../utils';
 
@@ -8,18 +8,31 @@ interface SampleCardProps {
 }
 
 export default function SampleCard({ sample, onDelete }: SampleCardProps) {
+  const navigate = useNavigate();
+
   const handleDelete = (event: React.MouseEvent<HTMLButtonElement>) => {
-    onDelete(sample.id, sample.sampling_location);
     event.preventDefault();
+    event.stopPropagation();
+    onDelete(sample.id, sample.sampling_location);
+  };
+
+  const handleEdit = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    navigate(`/edit/${sample.id}`);
+  };
+
+  const handleViewDetails = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    navigate(`/biosample/${sample.id}`);
   };
 
   return (
     <Link to={`/biosample/${sample.id}`}>
         <article className="biosample-card">
         <h3>
-            <Link to={`/biosample/${sample.id}`} aria-label={`View details for sample from ${sample.sampling_location}`}>
             {sample.sampling_location}
-            </Link>
         </h3>
         
         <div className="biosample-meta">
@@ -40,22 +53,26 @@ export default function SampleCard({ sample, onDelete }: SampleCardProps) {
         </div>
 
         <div className="biosample-actions">
-            <Link to={`/biosample/${sample.id}`}>
-            <button className="secondary small" aria-label={`View details for sample ${sample.id}`}>
+            <button 
+                className="secondary small" 
+                onClick={handleViewDetails}
+                aria-label={`View details for sample ${sample.id}`}
+            >
                 View Details
             </button>
-            </Link>
-            <Link to={`/edit/${sample.id}`}>
-            <button className="secondary small" aria-label={`Edit sample ${sample.id}`}>
+            <button 
+                className="secondary small" 
+                onClick={handleEdit}
+                aria-label={`Edit sample ${sample.id}`}
+            >
                 Edit
             </button>
-            </Link>
             <button 
-            className="danger small" 
-            onClick={handleDelete}
-            aria-label={`Delete sample ${sample.id}`}
+                className="danger small" 
+                onClick={handleDelete}
+                aria-label={`Delete sample ${sample.id}`}
             >
-            Delete
+                Delete
             </button>
         </div>
         </article>
