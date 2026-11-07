@@ -1,152 +1,39 @@
-# SporeBioTest 🧪
+# SporeBioTest
 
-Biological sample (BioSamples) management application with integrated comment system.
+A small full-stack app to record biological samples (where, when, by whom, what type) and comment on them, built as a time-boxed technical exercise.
 
-## 📋 Overview
+## What it does
+- Lists samples in a responsive, paginated grid (pages are cached on the frontend).
+- Creates, edits and deletes samples, with form validation and a delete confirmation.
+- Each sample stores a sampling location, a type (water, chocolate, flour, ...), a sampling date and the operator who took it.
+- Adds and deletes comments on each sample from its detail view.
+- REST API with full CRUD for samples (`/biosamples`, paginated with `page` and `size`) and comments (`/comments`).
 
-SporeBioTest is a full-stack application for managing biological samples. It provides a modern interface to create, view, modify and delete samples, with the ability to add comments for each sample.
+## Tech stack
+- **Backend:** Python, FastAPI, SQLModel (SQLAlchemy + Pydantic), SQLite
+- **Frontend:** React 19, TypeScript, Vite, React Router 7
 
-**Development time:** 3 hours
-
-## 🏗️ Architecture
-
-- **Backend:** REST API with FastAPI (Python)
-- **Frontend:** React application with TypeScript
-- **Database:** SQLite with SQLModel/SQLAlchemy
-- **Routing:** React Router v7
-
-## 🚀 Installation and Setup
-
-### Prerequisites
-
-- Python 3.8+
-- Node.js 18+
-- pnpm (recommended)
-
-### Backend Setup
-
-1. **Navigate to backend folder**
-   ```bash
-   cd backend
-   ```
-
-2. **Create and activate virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Start server**
-   ```bash
-   uvicorn main:app --reload
-   ```
-
-Backend will be available at `http://localhost:8000`
-
-### Frontend Setup
-
-1. **Navigate to frontend folder**
-   ```bash
-   cd frontend
-   ```
-
-2. **Install dependencies**
-   ```bash
-   pnpm install
-   ```
-
-3. **Start application**
-   ```bash
-   pnpm dev
-   ```
-
-Frontend will be available at `http://localhost:5173`
-
-### Environment Variables
-
-No environment variables needed. The application uses default configurations.
-
-
-## 📁 Structure du projet
-
+## Run it locally
+Backend (Python 3.8+), served on http://localhost:8000:
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate      # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload
 ```
-SporeBioTest/
-├── backend/
-│   ├── api/           # Endpoints API
-│   ├── models/        # Modèles SQLModel
-│   ├── schemas/       # Schémas Pydantic  
-│   ├── db/           # Configuration base de données
-│   └── main.py       # Point d'entrée FastAPI
-└── frontend/
-    ├── src/
-    │   ├── components/   # Composants React
-    │   ├── api/         # Services API
-    │   ├── types/       # Types TypeScript
-    │   └── utils/       # Utilitaires
-    └── package.json
+The SQLite database (`biosamples.db`) is created on first start. Set `DATABASE_URL` to use another database.
+
+Frontend (Node 18+, pnpm), served on http://localhost:5173:
+```bash
+cd frontend
+pnpm install
+pnpm dev
 ```
 
+## Data model
+- **BioSample:** `id`, `sampling_location`, `type`, `sampling_date`, `sampling_operator`
+- **Comment:** `id`, `biosample_id`, `content`, `created_at`
 
-## ✨ Features
-
-### Main Features
-
-- **📊 Sample listing:** Overview with responsive grid
-- **➕ Add samples:** Creation form with validation
-- **✏️ Edit samples:** Modify existing data
-- **🗑️ Delete samples:** Deletion with confirmation
-- **💬 Comment system:** Add and delete comments per sample
-- **📄 Pagination:** Optimized navigation with frontend caching
-- **🎨 Modern interface:** Responsive design with loading states
-
-## 📊 Data Model
-
-### BioSample
-- `id`: Unique identifier
-- `sampling_location`: Collection location
-- `type`: Sample type (water, chocolate, flour, etc.)
-- `sampling_date`: Collection date
-- `sampling_operator`: Operator who performed collection
-
-### Comment
-- `id`: Unique identifier
-- `biosample_id`: Reference to sample
-- `content`: Comment content
-- `created_at`: Creation date
-
-## 🔧 API Endpoints
-
-### BioSamples
-- `GET /biosamples/`: Paginated list of samples
-- `POST /biosamples/`: Create a sample
-- `GET /biosamples/{id}`: Sample details
-- `PUT /biosamples/{id}`: Modify a sample
-- `DELETE /biosamples/{id}`: Delete a sample
-
-### Comments
-- `GET /comments/`: List comments
-- `POST /comments/`: Create a comment
-- `GET /comments/{id}`: Comment details
-- `PUT /comments/{id}`: Modify a comment
-- `DELETE /comments/{id}`: Delete a comment
-
-## 🎯 Potential Improvements
-
-### Features
-- **🔐 Authentication system:** User and permission management
-- **🔍 Search and filters:** Filter by type, date, operator
-- **📊 Dashboard:** Statistics and metrics
-- **📤 Data export:** CSV/PDF export of samples
-- **🔔 Notifications:** Alerts for new comments
-
-### Technical
-- **🎨 Styling with Tailwind CSS and shadcn/ui:** More modern interface
-- **🧪 Automated testing:** Backend (pytest) and frontend (Vitest)
-- **🚀 Deployment:** Docker configuration and CI/CD
-- **📱 PWA:** Progressive web application
-- **🔄 Real-time sync:** WebSockets for updates
+## Context
+Technical exercise for Spore.Bio, built in about 3 hours in June 2025. Next steps I listed at the time: authentication, search and filters by type, date or operator, CSV export, automated tests (pytest, Vitest), and Docker with CI/CD.
